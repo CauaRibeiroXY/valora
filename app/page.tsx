@@ -23,10 +23,12 @@ import {
   Layers,
   HelpCircle,
   Upload,
-  Download
+  Download,
+  Link2
 } from 'lucide-react';
 import { Asset, AssetAnalysis, AssetType, RecommendationAction } from '@/lib/types';
 import { DEFAULT_PORTFOLIO, DEFAULT_RULES_MARKDOWN } from '@/lib/defaultData';
+import { PluggyConnectButton } from '@/components/PluggyConnectButton';
 
 export default function InvestmentApp() {
   // State
@@ -41,6 +43,8 @@ export default function InvestmentApp() {
   // Settings / Keys
   const [geminiKey, setGeminiKey] = useState<string>('');
   const [brapiToken, setBrapiToken] = useState<string>('');
+  const [pluggyClientId, setPluggyClientId] = useState<string>('');
+  const [pluggyClientSecret, setPluggyClientSecret] = useState<string>('');
   
   // Filter state
   const [typeFilter, setTypeFilter] = useState<'all' | AssetType>('all');
@@ -58,6 +62,8 @@ export default function InvestmentApp() {
     const savedAnalyses = localStorage.getItem('investai_analyses');
     const savedGeminiKey = localStorage.getItem('investai_gemini_key') || '';
     const savedBrapiToken = localStorage.getItem('investai_brapi_token') || '';
+    const savedPluggyId = localStorage.getItem('investai_pluggy_id') || '';
+    const savedPluggySecret = localStorage.getItem('investai_pluggy_secret') || '';
 
     if (savedPortfolio) {
       try {
@@ -83,6 +89,8 @@ export default function InvestmentApp() {
 
     setGeminiKey(savedGeminiKey);
     setBrapiToken(savedBrapiToken);
+    setPluggyClientId(savedPluggyId);
+    setPluggyClientSecret(savedPluggySecret);
   }, []);
 
   // Save changes to LocalStorage
@@ -99,6 +107,33 @@ export default function InvestmentApp() {
   const updateAnalyses = (newAnalyses: Record<string, AssetAnalysis>) => {
     setAnalyses(newAnalyses);
     localStorage.setItem('investai_analyses', JSON.stringify(newAnalyses));
+  };
+
+  // Merge investments from Pluggy import
+  const handlePluggyImportSuccess = (importedAssets: Asset[]) => {
+    const currentTickers = new Set(portfolio.map(a => a.ticker.toUpperCase()));
+    const merged = [...portfolio];
+
+    importedAssets.forEach(item => {
+      if (currentTickers.has(item.ticker.toUpperCase())) {
+        // Update existing
+        const idx = merged.findIndex(a => a.ticker.toUpperCase() === item.ticker.toUpperCase());
+        if (idx !== -1) {
+          merged[idx] = {
+            ...merged[idx],
+            quantity: item.quantity,
+            averagePrice: item.averagePrice,
+            currentPrice: item.currentPrice,
+            name: item.name || merged[idx].name
+          };
+        }
+      } else {
+        // Add new
+        merged.push(item);
+      }
+    });
+
+    updatePortfolio(merged);
   };
 
   // Calculations
@@ -260,7 +295,6 @@ export default function InvestmentApp() {
     if (!ticker) return;
 
     if (editingAsset) {
-      // Update
       const updated = portfolio.map(a =>
         a.id === editingAsset.id
           ? {
@@ -283,7 +317,6 @@ export default function InvestmentApp() {
       );
       updatePortfolio(updated);
     } else {
-      // Create
       const newAsset: Asset = {
         id: `asset-${Date.now()}`,
         ticker,
@@ -377,6 +410,13 @@ export default function InvestmentApp() {
           </div>
 
           <div className="flex items-center space-x-3">
+            {/* Pluggy Connect Button */}
+            <PluggyConnectButton
+              onSuccessImport={handlePluggyImportSuccess}
+              pluggyClientId={pluggyClientId}
+              pluggyClientSecret={pluggyClientSecret}
+            />
+
             <button
               onClick={handleUpdateQuotes}
               disabled={isUpdatingQuotes}
@@ -514,7 +554,7 @@ export default function InvestmentApp() {
             }`}
           >
             <Settings className="h-4 w-4" />
-            <span>Chaves & Deploy Vercel</span>
+            <span>Chaves & Conexões (Pluggy / Gemini)</span>
           </button>
         </div>
 
@@ -561,7 +601,7 @@ export default function InvestmentApp() {
                   }}
                   className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 transition w-full sm:w-auto"
                 >
-                  <PlusCircle className="h-3.5 w-3.5 mr-1.5" /> Adicionar Ativo
+                  <PlusCircle className="h-3.5 w-3.5 mr-1.5" /> Adicionar Ativo Manual
                 </button>
               </div>
             </div>
@@ -899,22 +939,69 @@ export default function InvestmentApp() {
         {activeTab === 'settings' && (
           <div className="space-y-8 max-w-4xl">
             <div>
-              <h2 className="text-lg font-bold text-slate-100">Configurações de APIs & Deploy na Vercel</h2>
+              <h2 className="text-lg font-bold text-slate-100">Configurações de APIs & Conexão Pluggy</h2>
               <p className="text-xs text-slate-400">
-                Gerencie suas chaves de API com segurança e saiba como colocar seu sistema em produção na Vercel.
+                Gerencie suas credenciais para sincronização de investimentos Open Finance e análise de IA.
               </p>
             </div>
 
-            {/* API Keys Configuration */}
+            {/* Pluggy Open Finance Configuration */}
+            <div className="bg-slate-900/60 border border-sky-500/30 rounded-2xl p-6 space-y-5">
+              <h3 className="text-sm font-semibold text-sky-400 uppercase tracking-wider flex items-center">
+                <Link2 className="h-4 w-4 mr-2" /> Pluggy Open Finance (B3 & Corretoras)
+              </h3>
+              <p className="text-xs text-slate-300">
+                Permite conectar sua conta da B3, XP, BTG, Inter, NuInvest, etc., sem precisar de banco de dados Supabase no momento.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">
+                    PLUGGY_CLIENT_ID
+                  </label>
+                  <input
+                    type="text"
+                    value={pluggyClientId}
+                    onChange={(e) => {
+                      setPluggyClientId(e.target.value);
+                      localStorage.setItem('investai_pluggy_id', e.target.value);
+                    }}
+                    placeholder="Cole seu Client ID da Pluggy..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">
+                    PLUGGY_CLIENT_SECRET
+                  </label>
+                  <input
+                    type="password"
+                    value={pluggyClientSecret}
+                    onChange={(e) => {
+                      setPluggyClientSecret(e.target.value);
+                      localStorage.setItem('investai_pluggy_secret', e.target.value);
+                    }}
+                    placeholder="Cole seu Client Secret da Pluggy..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Obtenha em <a href="https://dashboard.pluggy.ai" target="_blank" rel="noreferrer" className="text-sky-400 underline">dashboard.pluggy.ai</a> ou defina no arquivo <code className="text-sky-300">.env.local</code>.
+              </p>
+            </div>
+
+            {/* AI & Market APIs Configuration */}
             <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-6">
               <h3 className="text-sm font-semibold text-emerald-400 uppercase tracking-wider flex items-center">
-                <Sparkles className="h-4 w-4 mr-2" /> Chaves de Integração
+                <Sparkles className="h-4 w-4 mr-2" /> Inteligência Artificial & Cotações
               </h3>
 
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-300 mb-1">
-                    Google Gemini API Key (Opcional se configurado em .env.local)
+                    Google Gemini API Key
                   </label>
                   <input
                     type="password"
@@ -927,13 +1014,13 @@ export default function InvestmentApp() {
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                   <p className="text-[11px] text-slate-500 mt-1">
-                    Obtenha gratuitamente em <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-emerald-400 underline">aistudio.google.com</a>. Se não preencher, o sistema usa o motor heurístico inteligente baseado nas suas regras.
+                    Obtenha gratuitamente em <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-emerald-400 underline">aistudio.google.com</a>.
                   </p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-slate-300 mb-1">
-                    Brapi Token (Opcional para cotações B3 em tempo real)
+                    Brapi Token (Opcional para cotações em tempo real)
                   </label>
                   <input
                     type="password"
@@ -946,7 +1033,7 @@ export default function InvestmentApp() {
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                   <p className="text-[11px] text-slate-500 mt-1">
-                    Obtenha gratuitamente em <a href="https://brapi.dev" target="_blank" rel="noreferrer" className="text-emerald-400 underline">brapi.dev</a>. Se não preencher, o sistema consulta a API pública e Yahoo Finance.
+                    Obtenha em <a href="https://brapi.dev" target="_blank" rel="noreferrer" className="text-emerald-400 underline">brapi.dev</a>. Se vazio, o sistema usa Yahoo Finance.
                   </p>
                 </div>
               </div>
@@ -973,19 +1060,20 @@ export default function InvestmentApp() {
                 <ExternalLink className="h-4 w-4 mr-2" /> Como subir para a Vercel
               </h3>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Este projeto é 100% desenvolvido em Next.js no padrão nativo da Vercel. Você pode fazer o deploy em minutos:
+                Este projeto é 100% desenvolvido em Next.js no padrão nativo da Vercel:
               </p>
               <ol className="list-decimal list-inside space-y-2 text-xs text-slate-400">
-                <li>Crie um repositório no seu GitHub e suba este código (<code className="text-emerald-400">git push origin main</code>).</li>
-                <li>Acesse o dashboard da <a href="https://vercel.com" target="_blank" rel="noreferrer" className="text-cyan-400 underline">Vercel</a> e clique em <strong>Add New Project</strong>.</li>
-                <li>Importe o repositório criado.</li>
-                <li>Nas configurações de <strong>Environment Variables</strong>, adicione:
+                <li>Suba o projeto para o seu GitHub (<code className="text-emerald-400">git push origin master</code>).</li>
+                <li>No dashboard da <a href="https://vercel.com" target="_blank" rel="noreferrer" className="text-cyan-400 underline">Vercel</a>, selecione <strong>Add New Project</strong>.</li>
+                <li>Adicione as variáveis de ambiente:
                   <ul className="list-disc list-inside ml-4 mt-1 font-mono text-[11px] text-slate-300">
-                    <li><code className="text-emerald-400">GEMINI_API_KEY</code>: Sua chave do Google Gemini</li>
-                    <li><code className="text-emerald-400">BRAPI_TOKEN</code>: Seu token da Brapi (opcional)</li>
+                    <li><code className="text-sky-300">PLUGGY_CLIENT_ID</code></li>
+                    <li><code className="text-sky-300">PLUGGY_CLIENT_SECRET</code></li>
+                    <li><code className="text-emerald-400">GEMINI_API_KEY</code></li>
+                    <li><code className="text-emerald-400">BRAPI_TOKEN</code> (opcional)</li>
                   </ul>
                 </li>
-                <li>Clique em <strong>Deploy</strong>. Seu sistema estará no ar com HTTPS e CDN global!</li>
+                <li>Pronto! Sincronização e IA funcionando online.</li>
               </ol>
             </div>
           </div>
