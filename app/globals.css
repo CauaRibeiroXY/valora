@@ -11,32 +11,55 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Garante que o iframe e o modal nativo do Pluggy fiquem sempre perfeitamente centralizados e dimensionados */
+/* Fix definitivo de centralização e dimensões para o modal e overlay do Pluggy SDK */
 div[id^="zoid-pluggy-connect-widget"] {
-  z-index: 999999999 !important;
+  z-index: 5000000000 !important;
 }
 
 div[class*="_modal-overlay"] {
   position: fixed !important;
   inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
-  z-index: 999999998 !important;
+  z-index: 5000000000 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  background-color: rgba(0, 0, 0, 0.75) !important;
+  background-color: rgba(0, 0, 0, 0.8) !important;
+  backdrop-filter: blur(4px) !important;
 }
 
 div[class*="_modal"] {
-  position: relative !important;
-  z-index: 999999999 !important;
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 5000000001 !important;
   width: 440px !important;
   max-width: 95vw !important;
-  height: 600px !important;
+  height: 640px !important;
   max-height: 90vh !important;
-  margin: auto !important;
+  margin: 0 !important;
   border-radius: 16px !important;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75) !important;
   overflow: hidden !important;
+  background-color: #0f172a !important;
+}
+
+div[class*="_modal-content"] {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+div[class*="_container"] {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+div[class*="_container"] iframe {
+  width: 100% !important;
+  height: 100% !important;
+  border: 0 !important;
 }

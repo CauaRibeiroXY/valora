@@ -27,7 +27,7 @@ import {
   Link2
 } from 'lucide-react';
 import { Asset, AssetAnalysis, AssetType, RecommendationAction } from '@/lib/types';
-import { DEFAULT_PORTFOLIO, DEFAULT_RULES_MARKDOWN } from '@/lib/defaultData';
+import { DEFAULT_RULES_MARKDOWN } from '@/lib/defaultData';
 import { PluggyConnectButton } from '@/components/PluggyConnectButton';
 
 export default function InvestmentApp() {
@@ -67,12 +67,18 @@ export default function InvestmentApp() {
 
     if (savedPortfolio) {
       try {
-        setPortfolio(JSON.parse(savedPortfolio));
+        const parsed = JSON.parse(savedPortfolio);
+        // Remove quaisquer ativos de exemplo antigos, mantendo apenas ativos reais importados
+        const onlyReal = parsed.filter((a: Asset) => a.id && a.id.startsWith('pluggy-'));
+        setPortfolio(onlyReal);
+        localStorage.setItem('investai_portfolio', JSON.stringify(onlyReal));
       } catch {
-        setPortfolio(DEFAULT_PORTFOLIO);
+        setPortfolio([]);
+        localStorage.setItem('investai_portfolio', JSON.stringify([]));
       }
     } else {
-      setPortfolio(DEFAULT_PORTFOLIO);
+      setPortfolio([]);
+      localStorage.setItem('investai_portfolio', JSON.stringify([]));
     }
 
     if (savedRules) {
@@ -116,7 +122,6 @@ export default function InvestmentApp() {
 
     importedAssets.forEach(item => {
       if (currentTickers.has(item.ticker.toUpperCase())) {
-        // Update existing
         const idx = merged.findIndex(a => a.ticker.toUpperCase() === item.ticker.toUpperCase());
         if (idx !== -1) {
           merged[idx] = {
@@ -128,7 +133,6 @@ export default function InvestmentApp() {
           };
         }
       } else {
-        // Add new
         merged.push(item);
       }
     });
@@ -318,7 +322,7 @@ export default function InvestmentApp() {
       updatePortfolio(updated);
     } else {
       const newAsset: Asset = {
-        id: `asset-${Date.now()}`,
+        id: `manual-${Date.now()}`,
         ticker,
         name: name || ticker,
         type,
@@ -419,7 +423,7 @@ export default function InvestmentApp() {
 
             <button
               onClick={handleUpdateQuotes}
-              disabled={isUpdatingQuotes}
+              disabled={isUpdatingQuotes || portfolio.length === 0}
               className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition disabled:opacity-50"
               title="Atualiza as cotações via API de mercado"
             >
@@ -429,7 +433,7 @@ export default function InvestmentApp() {
 
             <button
               onClick={handleAnalyzeAll}
-              disabled={isAnalyzingAll}
+              disabled={isAnalyzingAll || portfolio.length === 0}
               className="inline-flex items-center px-4 py-2 text-xs font-semibold rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/25 transition disabled:opacity-50"
             >
               <Sparkles className={`h-4 w-4 mr-1.5 ${isAnalyzingAll ? 'animate-spin' : ''}`} />
@@ -624,8 +628,12 @@ export default function InvestmentApp() {
                 <tbody className="divide-y divide-slate-800/80">
                   {filteredAssets.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-4 py-10 text-center text-slate-500">
-                        Nenhum ativo encontrado para os filtros selecionados.
+                      <td colSpan={8} className="px-4 py-16 text-center text-slate-500 space-y-3">
+                        <Layers className="h-10 w-10 mx-auto text-slate-700" />
+                        <div className="text-sm font-medium text-slate-300">Nenhum ativo importado ainda</div>
+                        <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                          Clique no botão azul <span className="text-sky-400 font-semibold">"Conectar B3 / Corretora (Pluggy)"</span> no topo para sincronizar sua carteira oficial ou adicione manualmente.
+                        </p>
                       </td>
                     </tr>
                   ) : (
