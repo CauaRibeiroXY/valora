@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Link2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Link2, Loader2, CheckCircle2 } from 'lucide-react';
 import { Item } from 'pluggy-sdk';
 import { Asset } from '@/lib/types';
 
@@ -136,14 +136,33 @@ export function PluggyConnectButton({
         )}
       </div>
 
+      {/* Modal Container Overlay com z-index alto e tela cheia */}
       {typeof window !== 'undefined' && connectToken && isOpen && (
-        <PluggyConnect
-          connectToken={connectToken}
-          includeSandbox
-          onSuccess={handleSuccess}
-          onError={handleError}
-          onClose={handleClose}
-        />
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-lg h-[640px] bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-950">
+              <span className="text-xs font-semibold text-slate-300 flex items-center gap-2">
+                <Link2 className="h-4 w-4 text-sky-400" /> Conectar via Pluggy Open Finance
+              </span>
+              <button
+                onClick={handleClose}
+                className="text-slate-400 hover:text-white p-1 rounded-lg text-sm transition"
+                title="Fechar"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex-1 w-full h-full relative">
+              <PluggyConnect
+                connectToken={connectToken}
+                includeSandbox
+                onSuccess={handleSuccess}
+                onError={handleError}
+                onClose={handleClose}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
