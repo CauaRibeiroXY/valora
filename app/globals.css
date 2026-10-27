@@ -1,26 +1,29 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #020617;
+  --foreground: #f8fafc;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Garante que o iframe e o modal nativo do Pluggy fiquem sempre no topo com dimensões perfeitas */
+div[id^="zoid-pluggy-connect-widget"] {
+  z-index: 999999999 !important;
+}
+
+div[class*="_modal-overlay"] {
+  z-index: 999999998 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+div[class*="_modal"] {
+  z-index: 999999999 !important;
+  margin: auto !important;
 }

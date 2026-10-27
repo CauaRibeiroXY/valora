@@ -66,8 +66,9 @@ export function PluggyConnectButton({
 
   const handleSuccess = async (data: { item: Item }) => {
     setIsOpen(false);
+    setConnectToken(null);
     setIsFetchingInvestments(true);
-    setStatusMessage(`Conexão realizada com sucesso (${data.item.connector?.name || 'Instituição'})! Baixando seus investimentos...`);
+    setStatusMessage(`Conexão realizada (${data.item.connector?.name || 'Instituição'})! Importando seus investimentos...`);
 
     try {
       const queryParams = new URLSearchParams({ itemId: data.item.id });
@@ -83,13 +84,13 @@ export function PluggyConnectButton({
 
       if (invData.assets && invData.assets.length > 0) {
         onSuccessImport(invData.assets);
-        setStatusMessage(`Sucesso! ${invData.assets.length} ativos importados para a sua carteira.`);
+        setStatusMessage(`Sucesso! ${invData.assets.length} ativos importados.`);
       } else {
-        setStatusMessage('Conexão realizada, mas nenhum investimento foi localizado nesta conta.');
+        setStatusMessage('Conexão realizada, mas nenhum investimento foi localizado.');
       }
     } catch (error) {
       console.error('Erro ao sincronizar investimentos:', error);
-      setStatusMessage('Erro ao sincronizar os investimentos da conta conectada.');
+      setStatusMessage('Erro ao sincronizar investimentos.');
     } finally {
       setIsFetchingInvestments(false);
       setTimeout(() => setStatusMessage(null), 6000);
@@ -99,6 +100,7 @@ export function PluggyConnectButton({
   const handleError = (error: { message?: string }) => {
     console.error('Erro no widget Pluggy:', error);
     setIsOpen(false);
+    setConnectToken(null);
     alert(error.message || 'Erro durante a conexão com a instituição.');
   };
 
@@ -136,33 +138,19 @@ export function PluggyConnectButton({
         )}
       </div>
 
-      {/* Modal Container Overlay com z-index alto e tela cheia */}
+      {/* 
+        O SDK do PluggyConnect já cria o seu próprio modal fixo em tela cheia com overlay.
+        Renderizamos diretamente na raiz do componente para não conflitar com estilos externos.
+      */}
       {typeof window !== 'undefined' && connectToken && isOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-lg h-[640px] bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-950">
-              <span className="text-xs font-semibold text-slate-300 flex items-center gap-2">
-                <Link2 className="h-4 w-4 text-sky-400" /> Conectar via Pluggy Open Finance
-              </span>
-              <button
-                onClick={handleClose}
-                className="text-slate-400 hover:text-white p-1 rounded-lg text-sm transition"
-                title="Fechar"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="flex-1 w-full h-full relative">
-              <PluggyConnect
-                connectToken={connectToken}
-                includeSandbox
-                onSuccess={handleSuccess}
-                onError={handleError}
-                onClose={handleClose}
-              />
-            </div>
-          </div>
-        </div>
+        <PluggyConnect
+          connectToken={connectToken}
+          includeSandbox
+          theme="dark"
+          onSuccess={handleSuccess}
+          onError={handleError}
+          onClose={handleClose}
+        />
       )}
     </>
   );
