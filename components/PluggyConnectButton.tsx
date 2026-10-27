@@ -1,8 +1,20 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
+import { createPortal } from 'react-dom';
 import { Link2, Loader2, CheckCircle2 } from 'lucide-react';
+import { Item } from 'pluggy-sdk';
 import { Asset } from '@/lib/types';
+
+// Carrega o componente oficial do SDK da Pluggy dinamicamente no client-side
+const PluggyConnect = dynamic(
+  () => import('react-pluggy-connect').then((mod) => mod.PluggyConnect),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
 
 interface PluggyConnectModalProps {
   onSuccessImport: (newAssets: Asset[]) => void;
@@ -15,40 +27,16 @@ export function PluggyConnectButton({
   pluggyClientId,
   pluggyClientSecret,
 }: PluggyConnectModalProps) {
-  const [connectUrl, setConnectUrl] = useState<string | null>(null);
+  const [connectToken, setConnectToken] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingInvestments, setIsFetchingInvestments] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
-  // Escuta os eventos postMessage do iframe do Pluggy (quando o usuário conclui o fluxo ou fecha)
   useEffect(() => {
-    const handleMessage = async (event: MessageEvent) => {
-      // Pluggy envia mensagens com dados da conexão
-      if (!event.data) return;
-
-      const data = event.data;
-      
-      // Evento de sucesso (conclusão do login no banco/B3)
-      if (data.event === 'item/created' || data.event === 'item/updated' || data.type === 'item/created' || (data.item && data.item.id)) {
-        const itemId = data.item?.id || data.itemId || data.id;
-        if (itemId) {
-          setIsOpen(false);
-          setConnectUrl(null);
-          await fetchInvestmentsByItemId(itemId);
-        }
-      }
-
-      // Evento de fechamento pelo usuário dentro do widget
-      if (data.event === 'close' || data.type === 'close' || data.action === 'close') {
-        setIsOpen(false);
-        setConnectUrl(null);
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [pluggyClientId, pluggyClientSecret]);
+    setMounted(true);
+  }, []);
 
   const handleOpenConnect = async () => {
     setIsLoading(true);
@@ -68,11 +56,7 @@ export function PluggyConnectButton({
         throw new Error(data.error || 'Erro ao gerar token');
       }
 
-      const token = data.accessToken;
-      // Constrói a URL direta do widget webapp oficial do Pluggy
-      // https://connect.pluggy.ai/?connectToken=...
-      const url = `https://connect.pluggy.ai/?connectToken=${token}&includeSandbox=true`;
-      setConnectUrl(url);
+      setConnectToken(data.accessToken);
       setIsOpen(true);
     } catch (error) {
       console.error('Falha ao conectar com Pluggy:', error);
@@ -86,12 +70,14 @@ export function PluggyConnectButton({
     }
   };
 
-  const fetchInvestmentsByItemId = async (itemId: string) => {
+  const handleSuccess = async (data: { item: Item }) => {
+    setIsOpen(false);
+    setConnectToken(null);
     setIsFetchingInvestments(true);
-    setStatusMessage('Conta conectada com sucesso! Importando seus investimentos...');
+    setStatusMessage(`Conexão realizada (${data.item.connector?.name || 'Instituição'})! Importando seus investimentos...`);
 
     try {
-      const queryParams = new URLSearchParams({ itemId });
+      const queryParams = new URLSearchParams({ itemId: data.item.id });
       if (pluggyClientId) queryParams.append('clientId', pluggyClientId);
       if (pluggyClientSecret) queryParams.append('clientSecret', pluggyClientSecret);
 
@@ -117,9 +103,16 @@ export function PluggyConnectButton({
     }
   };
 
+  const handleError = (error: { message?: string }) => {
+    console.error('Erro no widget Pluggy:', error);
+    setIsOpen(false);
+    setConnectToken(null);
+    alert(error.message || 'Erro durante a conexão com a instituição.');
+  };
+
   const handleClose = () => {
     setIsOpen(false);
-    setConnectUrl(null);
+    setConnectToken(null);
   };
 
   return (
@@ -151,36 +144,23 @@ export function PluggyConnectButton({
         )}
       </div>
 
-      {/* Modal responsivo e controlado de tela cheia com Iframe direto do Pluggy */}
-      {isOpen && connectUrl && (
-        <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-4 animate-in fade-in duration-200">
-          <div className="relative w-full max-w-md h-[92vh] max-h-[720px] bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-            {/* Cabeçalho do Modal */}
-            <div className="flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-800 shrink-0">
-              <span className="text-xs font-semibold text-slate-200 flex items-center gap-2">
-                <Link2 className="h-4 w-4 text-sky-400" /> Pluggy Open Finance
-              </span>
-              <button
-                onClick={handleClose}
-                className="text-slate-400 hover:text-white p-1 rounded-lg text-sm hover:bg-slate-800 transition"
-                title="Fechar"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Iframe Direto e Limpo com dimensões 100% */}
-            <div className="flex-1 w-full h-full bg-white relative">
-              <iframe
-                src={connectUrl}
-                title="Pluggy Connect"
-                className="w-full h-full border-0"
-                allow="camera; microphone; geolocation"
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Renderiza via createPortal diretamente no document.body para escapar do backdrop-blur do header */}
+      {mounted &&
+        typeof window !== 'undefined' &&
+        connectToken &&
+        isOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[999999999] pointer-events-auto">
+            <PluggyConnect
+              connectToken={connectToken}
+              includeSandbox
+              onSuccess={handleSuccess}
+              onError={handleError}
+              onClose={handleClose}
+            />
+          </div>,
+          document.body
+        )}
     </>
   );
 }

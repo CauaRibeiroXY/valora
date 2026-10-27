@@ -11,19 +11,32 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Garante que o iframe e o modal nativo do Pluggy fiquem sempre no topo com dimensões perfeitas */
+/* Garante que o iframe e o modal nativo do Pluggy fiquem sempre perfeitamente centralizados e dimensionados */
 div[id^="zoid-pluggy-connect-widget"] {
   z-index: 999999999 !important;
 }
 
 div[class*="_modal-overlay"] {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
   z-index: 999999998 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
+  background-color: rgba(0, 0, 0, 0.75) !important;
 }
 
 div[class*="_modal"] {
+  position: relative !important;
   z-index: 999999999 !important;
+  width: 440px !important;
+  max-width: 95vw !important;
+  height: 600px !important;
+  max-height: 90vh !important;
   margin: auto !important;
+  border-radius: 16px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+  overflow: hidden !important;
 }
