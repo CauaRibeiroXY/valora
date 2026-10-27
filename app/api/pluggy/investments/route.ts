@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPluggyClient } from '@/lib/pluggyClient';
 import { mapPluggyInvestmentToAsset } from '@/lib/pluggyMapper';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
