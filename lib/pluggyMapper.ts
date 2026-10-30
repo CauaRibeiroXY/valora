@@ -8,33 +8,41 @@ export function mapPluggyInvestmentToAsset(inv: Investment): Asset {
   let type: AssetType = 'stock';
   const rawType = (inv.type || '').toUpperCase();
   const rawSubtype = (inv.subtype || '').toUpperCase();
+  let ticker = inv.code || inv.name || `INV-${inv.id.substring(0, 6)}`;
+  ticker = ticker.trim().toUpperCase();
 
-  if (rawType.includes('EQUITY') || rawType.includes('STOCK') || rawSubtype.includes('STOCK')) {
-    type = 'stock';
-  } else if (rawType.includes('REAL_ESTATE') || rawSubtype.includes('REAL_ESTATE') || (inv.code && inv.code.endsWith('11'))) {
-    type = 'fii';
-  } else if (
+  if (
     rawType.includes('FIXED_INCOME') ||
     rawType.includes('TREASURY') ||
     rawSubtype.includes('TREASURY') ||
     rawSubtype.includes('CDB') ||
     rawSubtype.includes('LCI') ||
-    rawSubtype.includes('LCA')
+    rawSubtype.includes('LCA') ||
+    ticker.startsWith('CDB') ||
+    ticker.startsWith('LCI') ||
+    ticker.startsWith('LCA') ||
+    ticker.startsWith('BRSTN') ||
+    ticker.startsWith('TESOURO')
   ) {
     type = 'fixed_income';
+  } else if (
+    rawType.includes('REAL_ESTATE') ||
+    rawSubtype.includes('REAL_ESTATE') ||
+    (ticker.length >= 5 && ticker.endsWith('11') && !ticker.startsWith('SMAL') && !ticker.startsWith('DIVO') && !ticker.startsWith('BOVA') && !ticker.startsWith('IVVB'))
+  ) {
+    type = 'fii';
+  } else {
+    type = 'stock';
   }
 
-  // Ticker / Código
-  let ticker = inv.code || inv.name || `INV-${inv.id.substring(0, 6)}`;
-  // Limpa possíveis espaços ou formatações
-  ticker = ticker.trim().toUpperCase();
-
-  // Quantidade
-  const quantity = inv.quantity && inv.quantity > 0 ? inv.quantity : 1;
+  // Quantidade real (se for 0, mantém 0 para identificar posições já zeradas/residuais)
+  const quantity = typeof inv.quantity === 'number' ? inv.quantity : 0;
 
   // Valor atual total ou por cota
   const balance = inv.balance || inv.value || 0;
-  const currentPrice = inv.value && inv.quantity ? inv.value : (quantity > 0 && balance > 0 ? balance / quantity : balance);
+  const currentPrice = inv.value && quantity > 0
+    ? inv.value
+    : (quantity > 0 && balance > 0 ? balance / quantity : (inv.value || 0));
 
   // Preço médio (ou valor original investido)
   const amountOriginal = inv.amountOriginal || balance;

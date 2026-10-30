@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "InvestAI - Decisor Inteligente de Carteira (B3 & Renda Fixa)",
-  description: "Sistema inteligente para decidir se você deve Vender, Manter ou Comprar Mais com base em teses personalizadas e IA.",
+  title: "VALORA — Inteligência de Carteira & Deliberação B3",
+  description: "Gestão patrimonial com múltiplos fundamentalistas em tempo real e deliberação automatizada de alocação.",
 };
 
 export default function RootLayout({

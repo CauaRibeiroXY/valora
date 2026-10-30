@@ -3,11 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { createPortal } from 'react-dom';
-import { Link2, Loader2, CheckCircle2 } from 'lucide-react';
+import { Link2, Loader2, CheckCircle2, Landmark } from 'lucide-react';
 import { Item } from 'pluggy-sdk';
 import { Asset } from '@/lib/types';
 
-// Carrega o componente oficial do SDK da Pluggy dinamicamente no client-side
 const PluggyConnect = dynamic(
   () => import('react-pluggy-connect').then((mod) => mod.PluggyConnect),
   {
@@ -63,7 +62,7 @@ export function PluggyConnectButton({
       alert(
         error instanceof Error
           ? error.message
-          : 'Falha ao conectar. Verifique suas credenciais do Pluggy na aba Configurações.'
+          : 'Falha ao conectar. Verifique suas credenciais do Pluggy na aba Ajustes.'
       );
     } finally {
       setIsLoading(false);
@@ -74,7 +73,7 @@ export function PluggyConnectButton({
     setIsOpen(false);
     setConnectToken(null);
     setIsFetchingInvestments(true);
-    setStatusMessage(`Conexão realizada (${data.item.connector?.name || 'Instituição'})! Importando seus investimentos...`);
+    setStatusMessage(`Sincronizando ativos...`);
 
     try {
       const queryParams = new URLSearchParams({ itemId: data.item.id });
@@ -90,16 +89,16 @@ export function PluggyConnectButton({
 
       if (invData.assets && invData.assets.length > 0) {
         onSuccessImport(invData.assets);
-        setStatusMessage(`Sucesso! ${invData.assets.length} ativos importados para a carteira.`);
+        setStatusMessage(`${invData.assets.length} ativos importados`);
       } else {
-        setStatusMessage('Conexão realizada, mas nenhum investimento foi localizado.');
+        setStatusMessage('Nenhum ativo localizado');
       }
     } catch (error) {
       console.error('Erro ao sincronizar investimentos:', error);
-      setStatusMessage('Erro ao sincronizar investimentos.');
+      setStatusMessage('Erro ao sincronizar');
     } finally {
       setIsFetchingInvestments(false);
-      setTimeout(() => setStatusMessage(null), 6000);
+      setTimeout(() => setStatusMessage(null), 5000);
     }
   };
 
@@ -121,30 +120,29 @@ export function PluggyConnectButton({
         <button
           onClick={handleOpenConnect}
           disabled={isLoading || isFetchingInvestments}
-          className="inline-flex items-center px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-md shadow-sky-500/20 transition disabled:opacity-50"
-          title="Conectar com B3 ou sua Corretora via Open Finance Pluggy"
+          className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 hover:border-slate-700 transition disabled:opacity-50"
+          title="Conectar com B3 / Corretora via Open Finance"
         >
           {isLoading || isFetchingInvestments ? (
-            <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+            <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin text-emerald-400" />
           ) : (
-            <Link2 className="h-3.5 w-3.5 mr-1.5" />
+            <Landmark className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
           )}
           {isLoading
-            ? 'Iniciando...'
+            ? 'Conectando...'
             : isFetchingInvestments
-            ? 'Importando Ativos...'
-            : 'Conectar B3 / Corretora (Pluggy)'}
+            ? 'Importando...'
+            : 'Sincronizar B3'}
         </button>
 
         {statusMessage && (
-          <div className="text-xs text-sky-400 flex items-center bg-sky-950/40 border border-sky-800/60 px-2.5 py-1 rounded-lg animate-pulse">
-            <CheckCircle2 className="h-3.5 w-3.5 mr-1 text-sky-400" />
+          <div className="text-[11px] text-emerald-400 flex items-center bg-emerald-950/40 border border-emerald-800/60 px-2 py-0.5 rounded-md">
+            <CheckCircle2 className="h-3 w-3 mr-1 text-emerald-400" />
             {statusMessage}
           </div>
         )}
       </div>
 
-      {/* Renderiza via createPortal diretamente no document.body para escapar do backdrop-blur do header */}
       {mounted &&
         typeof window !== 'undefined' &&
         connectToken &&

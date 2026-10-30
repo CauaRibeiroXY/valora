@@ -19,7 +19,10 @@ export async function GET(request: NextRequest) {
     const investmentsResponse = await pluggyClient.fetchInvestments(itemId);
 
     const investments = investmentsResponse.results || [];
-    const assets = investments.map(mapPluggyInvestmentToAsset);
+    // Descarta posições com saldo ou quantidade zerada (resíduos/lixo de histórico)
+    const assets = investments
+      .map(mapPluggyInvestmentToAsset)
+      .filter(a => a.quantity > 0 && a.currentPrice > 0 && a.averagePrice > 0);
 
     return NextResponse.json({
       success: true,

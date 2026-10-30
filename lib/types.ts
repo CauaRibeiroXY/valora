@@ -14,6 +14,10 @@ export interface Asset {
   dividendYield?: number;
   pl?: number; // Preço / Lucro
   pvp?: number; // Preço / Valor Patrimonial
+  lpa?: number; // Lucro Por Ação
+  roe?: number; // Retorno sobre Patrimônio Líquido em %
+  profitMargins?: number; // Margem Líquida em %
+  evEbitda?: number; // EV / EBITDA
   targetPrice?: number;
   stopLossPrice?: number;
   sector?: string;
